@@ -1,6 +1,8 @@
 #ifndef CPU_H
 #define CPU_H
 
+#include <stdint.h>
+
 struct cpuInstruction {
 	uint8_t instr : 7;
 	uint8_t mod : 1;
@@ -17,5 +19,6 @@ struct cpuRegisters {
 
 struct cpuInstruction cpu_fetch_instruction();
 int cpu_run_instruction(struct cpuInstruction instruction);
+void cpu_load_memory(uint8_t * ptr, size_t len);
 
 #endif

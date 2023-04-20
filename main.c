@@ -23,6 +23,9 @@ int main() {
 		ret = cpu_run_instruction(instruction);
 
 		switch (ret) {
+			case -2:
+				fprintf(stderr, "CPU tried running invalid opcode\n");
+				return -2;
 			case -1:
 				fprintf(stderr, "CPU tried accessing invalid memory\n");
 				return -1;
