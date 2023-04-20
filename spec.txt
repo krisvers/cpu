@@ -1,0 +1,176 @@
+- load/store architecture (no mem ops)
+- 4 32-bit general purpose registers (a, b, c, d)
+- 2 32-bit math registers (e (mult), f (div))
+- 3 32-bit pointer registers (sp, bp, ip)
+- no hardware floating point support
+- 1 mhz clock
+- possible memory mapped hardware
+
+opcodes:
+-	fixed-width opcodes/instructions
+-	48-bit/6-byte width
+-	the first 7 bits are the instruction
+-	the next bit is the modifier (mostly used to differentiate sign)
+-	the next 4 bits are the register
+-	the next 4 bits are used for the second register
+-	the next 32 bits can be an immediate, address, or other
+
+instructions:
+-	legend:
+		reg = register,
+		imm = immediate,
+		addr = address,
+		instr = instruction,
+		dest = destination (could be reg or addr),
+		src = source (could me immediate or addr)
+
+-	instruction syntax usually follows this order in assembly, which is similar to x86 intel syntax: instr dest, src
+-	when performing multiplication, the product is stored in register e
+-	when performing division, the quotient is stored in register f
+-	when performing bitwise operations, the result is stored in register c
+
+	nop (0b0000):
+		wastes a cpu cycle
+
+		nop
+
+	load (0b0001):
+		load a value from immediate or address into register for operations
+
+		load reg, imm
+		load reg, addr
+
+	store (0b0010):
+		store value from register to address or register
+
+		store addr, reg
+		store reg, reg
+
+	add (0b0011):
+		perform addition on register using immediate or register storing the value in the destination register
+
+		add reg, imm
+		add reg, reg
+
+	sub (0b0100):
+		sub unsigned (0b0):
+			perform unsigned subtraction on register using immediate or register storing the value in the destination register
+
+			subu reg, imm
+			subu reg, reg
+
+		sub signed (0b1):
+			perform signed (two's compliment) subtraction on register using immediate or register storing the value in the destination register
+
+			subs reg, imm
+			subs reg, reg
+
+	mul (0b0101):
+		mul unsigned (0b0):
+			perform unsigned multiplication on register using immediate or register storing the value in register e
+
+			mulu reg, imm
+			mulu reg, reg
+
+		mul signed (0b1):
+			perform signed (two's compliment) multiplication on register using immediate or register storing the value in register e
+
+			muls reg, imm
+			muls reg, reg
+
+	div (0b0110):
+		div unsigned (0b0):
+			perform unsigned division on register using immediate or register storing the value in register f
+
+			divu reg, imm
+			divu reg, reg
+
+		div signed (0b1):
+			perform signed (two's compliment) division on register using immediate or register storing the value in register f
+
+			divs reg, imm
+			divs reg, reg
+
+	rem (0b0111):
+		perform modulo on register using immediate or register, storing the value in register f
+
+		rem reg, imm
+		rem reg, reg
+
+	or (0b1000):
+		perform bitwise or on register using immediate or register, storing value in register c
+
+		or reg, imm
+		or reg, reg
+
+	and (0b1001):
+		perform bitwise and on register using immediate or register, storing value in register c
+
+		and reg, imm
+		and reg, reg
+
+	xor (0b1010):
+		perform bitwise exclusive or on register using immediate or register, storing value in register c
+
+		xor reg, imm
+		xor reg, reg
+
+	not (0b1011):
+		perform bitwise not on register or immediate, storing value in register c
+
+		not imm
+		not reg
+
+	shr (0b1100):
+		perform bitwise shift rightwards on register using immediate or register, filling the new bits with zeroes, storing value in register c
+
+		shr reg, imm
+		shr reg, reg
+
+	shl (0b1101):
+		perform bitwise shift leftwards on register using immediate or register, filling the new bits with zeroes, storing value in register c
+
+		shl reg, imm
+		shl reg, reg
+
+	push (0b1110, 0b0):
+		pushes register or immediate value to the stack (defined with registers sp and bp), then decrements sp
+
+		push reg
+		push imm
+
+	pop (0b1110, 0b1):
+		pops value from stack into register, then increments sp
+
+		pop reg
+
+	jmp (0b1111):
+		unconditional (0b0):
+			jmp imm
+			jmp reg
+
+		conditional (0b1):
+			jump zero/equal (0b000):
+				jumps to given address (immediate or register), if register c is zero
+
+				jz imm
+				jz reg
+
+			jump greater unsigned (0b001):
+				jumps to given address (immediate or register), if registers c is greater than zero
+
+				jgu imm
+				jgu reg
+
+			jump greater signed (0b010):
+				jumps to given address (immediate or register), if register c is positive (using two's compliment)
+				
+				jgs imm
+				jgs reg
+
+			jump lesser signed (0b011):
+				jumps to given address (immediate or register), if register c is negative (using two's compliment)
+
+				jls imm
+				jls reg
+
