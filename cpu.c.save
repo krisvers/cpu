@@ -39,7 +39,7 @@ static int8_t cpu_assign_reg_from_memory(uint8_t reg, uint32_t vp) {
 	if (vp > MEMORY_SIZE) {
 		return MEMORY_ERR;
 	}
-
+	
 	CPU_REGISTER_INDEX(reg) = (memory[vp]) | (memory[vp + 1] << 8) | (memory[vp + 2] << 16) | (memory[vp + 3] << 24);
 
 	return 0;
@@ -52,23 +52,12 @@ static int8_t cpu_assign_memory_from_reg_byte(uint8_t reg, uint32_t vp) {
 
 	uint8_t r = CPU_REGISTER_INDEX(reg);
 
-	memory[vp] = r;
+	memory[vp] = reg;
 
 	return 0;
 }
 
-static int8_t cpu_assign_memory_from_reg_word(uint8_t reg, uint32_t vp) {
-	if (vp + 1 > MEMORY_SIZE) {
-		return MEMORY_ERR;
-	}
-
-	uint16_t r = CPU_REGISTER_INDEX(reg);
-
-	memory[vp] = r & 0xFF;
-	memory[vp + 1] = (r >> 8) & 0xFF;
-
-	return 0;
-}
+static int8_t cpu_assign_memort
 
 static int8_t cpu_assign_memory_from_reg(uint8_t reg, uint32_t vp) {
 	if (vp + 3 > MEMORY_SIZE) {
