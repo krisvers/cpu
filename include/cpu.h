@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 struct cpuInstruction {
 	uint8_t instr : 7;

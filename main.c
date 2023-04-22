@@ -5,7 +5,7 @@
 
 #include <cpu.h>
 
-#define CODE_LENGTH 256
+#define CODE_LENGTH 480
 
 uint8_t code[CODE_LENGTH] = {
 	
