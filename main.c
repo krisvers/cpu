@@ -8,7 +8,7 @@
 #define CODE_LENGTH 480
 
 uint8_t code[CODE_LENGTH] = {
-	
+	0b00001000, 0b00000000, 0xFF, 0x69, 0x00, 0x42
 };
 
 int main() {

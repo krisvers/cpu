@@ -16,10 +16,11 @@
 	(*((int32_t *) (reg_array[n])))
 
 struct cpuRegisters reg;
+struct cpuInstruction last_instruction;
 
 uint32_t * reg_array[9];
-
 uint8_t memory[MEMORY_SIZE];
+static int8_t err = 0;
 
 static int8_t cpu_assign_reg_from_memory_byte(uint8_t reg, uint32_t vp) {
 	if (vp > MEMORY_SIZE) {
@@ -91,6 +92,10 @@ static int8_t cpu_assign_memory_from_reg(uint8_t reg, uint32_t vp) {
 	return 0;
 }
 
+static void cpu_error(int8_t error) {
+	err = error;
+}
+
 void cpu_init() {
 	reg_array[0] = &reg.a;
 	reg_array[1] = &reg.b;
@@ -105,8 +110,12 @@ void cpu_init() {
 
 void cpu_print_status() {
 	printf(
-		"a: 0x%04x, b: 0x%04x, c: 0x%04x, d: 0x%04x, e: 0x%04x, f: 0x%04x\nsp: 0x%04x, bp: 0x%04x, ip: 0x%04x\n\n",
+		"a: 0x%04x, b: 0x%04x, c: 0x%04x, d: 0x%04x, e: 0x%04x, f: 0x%04x\nsp: 0x%04x, bp: 0x%04x, ip: 0x%04x\n",
 		reg.a,     reg.b,    reg.c,    reg.d,    reg.e,    reg.f,    reg.sp,    reg.bp,    reg.ip
+	);
+	printf(
+		"instruction:\n\topcode: 0x%02x, mod: %d, info: 0x%01x, reg1: 0x%01x, reg2: 0x%01x, value: 0x%04x\n",
+		last_instruction.instr, last_instruction.mod, last_instruction.info, last_instruction.reg1, last_instruction.reg2, last_instruction.value
 	);
 }
 
@@ -115,10 +124,29 @@ void cpu_load_memory(uint8_t * ptr, size_t len) {
 }
 
 struct cpuInstruction cpu_fetch_instruction() {
-	return *((struct cpuInstruction *) &memory[reg.ip]);
+	if (reg.ip + 5 > MEMORY_SIZE) {
+		cpu_error(MEMORY_ERR);
+
+		return (struct cpuInstruction) {
+			0, 0, 0, 0, 0, 0
+		};
+	}
+
+	last_instruction.instr	= (memory[reg.ip] >> 3);
+	last_instruction.mod	= (memory[reg.ip] >> 2) & 0b1;
+	last_instruction.info	= (memory[reg.ip] & 0b11);
+	last_instruction.reg1	= (memory[reg.ip + 1] >> 4);
+	last_instruction.reg2	= (memory[reg.ip + 1] & 0b1111);
+	last_instruction.value	= ((memory[reg.ip + 2]) | (memory[reg.ip + 3] << 8) | (memory[reg.ip + 4] << 16) | (memory[reg.ip + 5] << 24));
+
+	return last_instruction;
 }
 
 int cpu_run_instruction(struct cpuInstruction instruction) {
+	if (err) {
+		return err;
+	}
+
 	switch (instruction.instr) {
 		// nop
 		case NOP:
