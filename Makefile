@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -Wextra -O3 -Iinclude
+CFLAGS = -Wall -Wextra -O3 -Iinclude -std=c99
 
 all:
 	$(CC) *.c -o emu $(CFLAGS)

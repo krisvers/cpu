@@ -9,34 +9,40 @@
 #define MEMORY_ERR -1
 #define OPCODE_ERR -2
 
-#define NOP 0b0000000
-#define LOD 0b0000001
-#define STR 0b0000010
-#define ADD 0b0000011
-#define SUB 0b0000100
-#define MUL 0b0000101
-#define DIV 0b0000110
-#define OR  0b0000111
-#define AND 0b0001000
-#define XOR 0b0001001
-#define NOT 0b0001010
-#define SHR 0b0001011
-#define SHL 0b0001100
-#define PSH 0b0001101
-#define JMP 0b0001110
-
 #define CPU_REGISTER_INDEX(n) \
-	(*(((uint32_t *) &reg) + n))
+	(*(reg_array[n]))
 
 #define CPU_REGISTER_INDEX_SIGNED(n) \
-	(*(((int32_t *) &reg) + n))
+	(*((int32_t *) (reg_array[n])))
 
 struct cpuRegisters reg;
 
+uint32_t * reg_array[9];
+
 uint8_t memory[MEMORY_SIZE];
 
-static int8_t cpu_assign_reg_from_memory(uint8_t reg, uint32_t vp) {
+static int8_t cpu_assign_reg_from_memory_byte(uint8_t reg, uint32_t vp) {
 	if (vp > MEMORY_SIZE) {
+		return MEMORY_ERR;
+	}
+
+	CPU_REGISTER_INDEX(reg) = (memory[vp]);
+
+	return 0;
+}
+
+static int8_t cpu_assign_reg_from_memory_word(uint8_t reg, uint32_t vp) {
+	if (vp + 1 > MEMORY_SIZE) {
+		return MEMORY_ERR;
+	}
+
+	CPU_REGISTER_INDEX(reg) = (memory[vp]) | (memory[vp + 1] << 8);
+
+	return 0;
+}
+
+static int8_t cpu_assign_reg_from_memory(uint8_t reg, uint32_t vp) {
+	if (vp + 3 > MEMORY_SIZE) {
 		return MEMORY_ERR;
 	}
 
@@ -61,7 +67,7 @@ static int8_t cpu_assign_memory_from_reg_word(uint8_t reg, uint32_t vp) {
 	if (vp + 1 > MEMORY_SIZE) {
 		return MEMORY_ERR;
 	}
-
+	
 	uint16_t r = CPU_REGISTER_INDEX(reg);
 
 	memory[vp] = r & 0xFF;
@@ -85,6 +91,25 @@ static int8_t cpu_assign_memory_from_reg(uint8_t reg, uint32_t vp) {
 	return 0;
 }
 
+void cpu_init() {
+	reg_array[0] = &reg.a;
+	reg_array[1] = &reg.b;
+	reg_array[2] = &reg.c;
+	reg_array[3] = &reg.d;
+	reg_array[4] = &reg.e;
+	reg_array[5] = &reg.f;
+	reg_array[6] = &reg.sp;
+	reg_array[7] = &reg.bp;
+	reg_array[8] = &reg.ip;
+}
+
+void cpu_print_status() {
+	printf(
+		"a: 0x%04x, b: 0x%04x, c: 0x%04x, d: 0x%04x, e: 0x%04x, f: 0x%04x\nsp: 0x%04x, bp: 0x%04x, ip: 0x%04x\n\n",
+		reg.a,     reg.b,    reg.c,    reg.d,    reg.e,    reg.f,    reg.sp,    reg.bp,    reg.ip
+	);
+}
+
 void cpu_load_memory(uint8_t * ptr, size_t len) {
 	memcpy(memory, ptr, len);
 }
@@ -102,11 +127,22 @@ int cpu_run_instruction(struct cpuInstruction instruction) {
 		case LOD:
 			// load reg, addr
 			if (instruction.mod) {
-				if (cpu_assign_reg_from_memory(instruction.reg1, instruction.value) != 0) {
-					return MEMORY_ERR;
+				int8_t ret;
+				switch (instruction.info) {
+					case 0:
+						ret = cpu_assign_reg_from_memory_byte(instruction.reg1, instruction.value);
+						break;
+					case 1:
+						ret = cpu_assign_reg_from_memory_word(instruction.reg1, instruction.value);
+						break;
+					case 2:
+						ret = cpu_assign_reg_from_memory(instruction.reg1, instruction.value);
+						break;
+					default:
+						return OPCODE_ERR;
 				}
 
-				return 0;
+				return ret;
 			}
 
 			// load reg, imm
@@ -117,11 +153,22 @@ int cpu_run_instruction(struct cpuInstruction instruction) {
 		case STR:
 			// store addr, reg
 			if (instruction.mod) {
-				if (cpu_assign_memory_from_reg(instruction.reg1, instruction.value) != 0) {
-					return MEMORY_ERR;
+				int8_t ret;
+				switch (instruction.info) {
+					case 0:
+						ret = cpu_assign_memory_from_reg_byte(instruction.reg1, instruction.value);
+						break;
+					case 1:
+						ret = cpu_assign_memory_from_reg_word(instruction.reg1, instruction.value);
+						break;
+					case 2:
+						ret = cpu_assign_memory_from_reg(instruction.reg1, instruction.value);
+						break;
+					default:
+						return OPCODE_ERR;
 				}
 
-				return 0;
+				return ret;
 			}
 
 			// store reg, reg
@@ -264,12 +311,98 @@ int cpu_run_instruction(struct cpuInstruction instruction) {
 		case PSH:
 			// push reg
 			if (instruction.mod) {
-				if (cpu_assign_memory_from_reg(CPU_REGISTER_INDEX(instruction.reg1), reg.sp) != 0) {
-					return MEMORY_ERR
+				int8_t ret;
+				switch (instruction.info) {
+					case 0:
+						ret = cpu_assign_memory_from_reg_byte(instruction.reg1, reg.sp);
+						break;
+					case 1:
+						ret = cpu_assign_memory_from_reg_word(instruction.reg1, reg.sp);
+						break;
+					case 2:
+						ret = cpu_assign_memory_from_reg(instruction.reg1, reg.sp);
+						break;
+					default:
+						return OPCODE_ERR;
 				}
 
 				reg.sp -= 4;
+				return ret;
 			}
+
+			// pop reg
+			reg.sp -= 4;
+			if (cpu_assign_reg_from_memory(instruction.reg1, reg.sp) != 0) {
+				return MEMORY_ERR;
+			}
+
+			return 0;
+		case JMP:
+			if (instruction.mod) {
+				// jxx imm
+				if (instruction.value + 5 > MEMORY_SIZE) {
+					return MEMORY_ERR;
+				}
+
+				switch (instruction.info) {
+					// jz imm
+					case 0:
+						if (!reg.c) {
+							reg.ip = instruction.value;
+						}
+						break;
+					// jg imm (signed)
+					case 1:
+						if (!(reg.c >> 31)) {
+							reg.ip = instruction.value;
+						}
+						break;
+					// jl imm (signed)
+					case 2:
+						if (reg.c >> 31) {
+							reg.ip = instruction.value;
+						}
+						break;
+					// jmp imm
+					case 3:
+						reg.ip = instruction.value;
+						break;
+				}
+
+				return 0;
+			}
+
+			// jxx reg
+			if (CPU_REGISTER_INDEX(instruction.reg1) + 5 > MEMORY_SIZE) {
+				return MEMORY_ERR;
+			}
+
+			switch (instruction.info) {
+				// jz reg
+				case 0:
+					if (!reg.c) {
+						reg.ip = CPU_REGISTER_INDEX(instruction.reg1);
+					}
+					break;
+				// jg reg (signed)
+				case 1:
+					if (!(reg.c >> 31)) {
+						reg.ip = CPU_REGISTER_INDEX(instruction.reg1);
+					}
+					break;
+				// jl reg (signed)
+				case 2:
+					if (reg.c >> 31) {
+						reg.ip = CPU_REGISTER_INDEX(instruction.reg1);
+					}
+					break;
+				// jmp reg
+				case 3:
+					reg.ip = CPU_REGISTER_INDEX(instruction.reg1);
+					break;
+			}
+
+			return 0;
 		default:
 			return OPCODE_ERR;
 	}

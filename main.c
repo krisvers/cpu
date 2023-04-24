@@ -37,5 +37,10 @@ int main() {
 			default:
 				break;
 		}
+
+		printf("CPU:\n");
+		cpu_print_status();
+
+		while (fgetc(stdin) != '\n');
 	}
 }
